@@ -1,6 +1,6 @@
 extern crate clap;
 use clap::{Arg, Command as ClapCommand};
-use std::process::{Command};
+use std::process::Command;
 
 fn main() {
     // Create the App builder
