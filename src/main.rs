@@ -1,6 +1,6 @@
-extern crate clap;
+extern crate clap;// parses CLI arguments
 use clap::{Arg, Command as ClapCommand};
-use std::process::Command;
+use std::{process::Command, fs};
 
 fn main() {
     // Create the App builder
@@ -25,31 +25,48 @@ fn main() {
                 .help("Sets the output packaged movie file")
                 .required(true),
         );
+        
+    
+    // Output directory (with error handling)
+    let output_dir = "src/assets/outputs";
+    match fs::create_dir_all(output_dir) {
+        Err(e) => {
+          eprintln!("Failed to create output dir: {}", e);
+          std::process::exit(1);
+        }
+        Ok(_) => { // dir created 
+        }
+    }
 
     // Parse command-line arguments
     let matches = app.get_matches();
 
     // Extract values of parsed arguments
-    let input_files:&String = matches.get_one("input").unwrap();
-    let output_file:&String = matches.get_one("output").unwrap();
+    let input_files:&String = matches.get_one::<String>("input").unwrap();
+    let output_file = format!("{}/{}", output_dir, matches.get_one::<String>("output").unwrap());
 
-    //Converting input file string to vector of input files
+
+    //Converting input file string to vector of input files(the .ts files)
     let input_files: Vec<&str> = input_files.split(',').collect();
 
     //Using ffmpeg to concatenate input files into the output file
-    // let mut cmd = Command::new("ffmpeg");
-    // cmd.arg("-i").args(input_files).arg("-filter_complex").arg("concat=n=-2:v=1:a=1").arg(output_file);
     let mut cmd = Command::new("ffmpeg"); 
-    cmd.arg("-i").arg(input_files[0]) // Take first input file
-        .arg("-profile:v")
-        .arg("baseline")
-        // .. Add other HLS options
-        .arg("index.m3u8"); // HLS playlist output
+    cmd.arg("-i")
+    .arg(input_files[0]) // Take first input file
+    .arg("-c:v") 
+    .arg("libx264")
+    .arg("-hls_time")  
+    .arg("10")
+    .arg("-hls_list_size") 
+    .arg("0")
+    .arg("-f")
+    .arg("hls")
+    .arg(output_file); // HLS playlist output
 
     match cmd.status(){
         Ok(exit_status)=>{
             if exit_status.success(){
-                println!("Movies packaged successfully into: {}", output_file);
+                println!("Movies packaged successfully into: {}", output_dir);
             } else {
                 eprintln!("Error: Failed to create the package.");
             }
@@ -58,4 +75,5 @@ fn main() {
     }
 
 }
+
 
